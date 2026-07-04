@@ -29,6 +29,11 @@ class ChordEvent(BaseModel):
     chord: str
 
 
+class StrumEvent(BaseModel):
+    time: float
+    direction: Literal["down", "up"]
+
+
 class ChordInfo(BaseModel):
     chord: str
     fingering: List[int]
@@ -66,6 +71,7 @@ class TabMonsterResult(BaseModel):
     secondary_tab: Optional[TabResult] = None
     chords: List[ChordEvent] = []
     chord_info: List[ChordInfo] = []
+    strum_pattern: List[StrumEvent] = []
     suggested_capo: int = 0
     all_web_results: List[TabResult] = []
     sources_tried: List[str] = []

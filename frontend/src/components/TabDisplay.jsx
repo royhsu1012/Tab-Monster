@@ -2,6 +2,7 @@ import { useState } from "react";
 import ChordGrid from "./ChordGrid.jsx";
 import ChordTimeline from "./ChordTimeline.jsx";
 import SourceBadge from "./SourceBadge.jsx";
+import StrumPattern from "./StrumPattern.jsx";
 
 const VIEWS = [
   { key: "tab", label: "🎸 六線譜" },
@@ -69,7 +70,12 @@ export default function TabDisplay({ result }) {
           </pre>
         )}
         {view === "chords" && <ChordGrid chordInfo={result.chord_info} />}
-        {view === "timeline" && <ChordTimeline chords={result.chords} />}
+        {view === "timeline" && (
+          <div className="space-y-4">
+            <ChordTimeline chords={result.chords} />
+            <StrumPattern strums={result.strum_pattern} />
+          </div>
+        )}
         {view === "sources" && (
           <div className="space-y-2">
             {result.all_web_results.map((tab, i) => (

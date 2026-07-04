@@ -16,7 +16,7 @@ from core.audio_analyzer import AudioAnalysisResult
 from core.capo_detector import suggest_capo, transpose_chord, transpose_key_label
 from core.gp_parser import parse_gp_file
 from core.tab_generator import notes_to_ascii
-from models.schemas import ChordEvent, ChordInfo, SearchResult, SongInfo, TabMonsterResult, TabResult
+from models.schemas import ChordEvent, ChordInfo, SearchResult, SongInfo, StrumEvent, TabMonsterResult, TabResult
 from utils.chord_templates import CHORD_DATA
 
 logger = logging.getLogger(__name__)
@@ -97,6 +97,7 @@ def assemble(
     secondary_tab: Optional[TabResult] = None,
     bpm: Optional[float] = None,
     key: Optional[str] = None,
+    strum_pattern: Optional[List[StrumEvent]] = None,
     all_web_results: Optional[List[TabResult]] = None,
     sources_tried: Optional[List[str]] = None,
     warnings: Optional[List[str]] = None,
@@ -126,6 +127,7 @@ def assemble(
         secondary_tab=secondary_tab,
         chords=chords,
         chord_info=build_chord_info(chord_names),
+        strum_pattern=strum_pattern or [],
         suggested_capo=capo,
         all_web_results=all_web_results or [],
         sources_tried=sources_tried or [],

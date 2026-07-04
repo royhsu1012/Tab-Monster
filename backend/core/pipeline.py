@@ -37,6 +37,7 @@ async def _run_ai_analysis(
     analysis = await asyncio.to_thread(audio_analyzer.analyze, str(wav_path))
     await _emit(progress_cb, "ai:pitch", f"偵測到 {len(analysis.pitches)} 個音符")
     await _emit(progress_cb, "ai:chords", f"偵測到 {len(analysis.chords)} 個和弦變化")
+    await _emit(progress_cb, "ai:strums", f"偵測到 {len(analysis.strums)} 個刷弦節奏點")
     await _emit(progress_cb, "ai:bpm", f"BPM ≈ {analysis.bpm:.0f}")
     await _emit(progress_cb, "generate:midi", "產生 MIDI...")
     ai_tab = tab_generator.generate_tab(analysis.pitches, analysis.bpm)
@@ -95,6 +96,7 @@ async def _run_ai_only(song: SongInfo, wav_path: Path, progress_cb) -> TabMonste
     result = result_merger.assemble(
         song=song, mode_used="ai_only", primary_tab=ai_tab,
         chords=analysis.chords, bpm=analysis.bpm, key=analysis.key,
+        strum_pattern=analysis.strums,
     )
     await _emit(progress_cb, "done", "完成", {"result": result.model_dump()})
     return result
@@ -127,6 +129,7 @@ async def _run_web_first(song: SongInfo, wav_path: Path, workdir: Path, progress
                 song=song, mode_used="web_first", primary_tab=web_tab,
                 chords=chords, bpm=analysis.bpm or meta.get("bpm") or 0.0,
                 key=analysis.key or meta.get("key"),
+                strum_pattern=analysis.strums,
                 all_web_results=all_web_tabs, sources_tried=sources, warnings=warnings,
             )
             await _emit(progress_cb, "done", "完成", {"result": result.model_dump()})
@@ -144,6 +147,7 @@ async def _run_web_first(song: SongInfo, wav_path: Path, workdir: Path, progress
             result = result_merger.assemble(
                 song=song, mode_used="web_first_both", primary_tab=web_tab, secondary_tab=ai_tab,
                 chords=analysis.chords, bpm=analysis.bpm, key=analysis.key,
+                strum_pattern=analysis.strums,
                 all_web_results=all_web_tabs, sources_tried=sources, warnings=warnings,
             )
         else:
@@ -151,6 +155,7 @@ async def _run_web_first(song: SongInfo, wav_path: Path, workdir: Path, progress
             result = result_merger.assemble(
                 song=song, mode_used="ai_fallback", primary_tab=ai_tab,
                 chords=analysis.chords, bpm=analysis.bpm, key=analysis.key,
+                strum_pattern=analysis.strums,
                 sources_tried=sources, warnings=warnings,
             )
         await _emit(progress_cb, "done", "完成", {"result": result.model_dump()})
@@ -165,6 +170,7 @@ async def _run_web_first(song: SongInfo, wav_path: Path, workdir: Path, progress
     result = result_merger.assemble(
         song=song, mode_used="ai_fallback", primary_tab=ai_tab,
         chords=analysis.chords, bpm=analysis.bpm, key=analysis.key,
+        strum_pattern=analysis.strums,
         sources_tried=sources, warnings=warnings,
     )
     await _emit(progress_cb, "done", "完成", {"result": result.model_dump()})
@@ -215,6 +221,7 @@ async def _run_parallel(song: SongInfo, wav_path: Path, workdir: Path, progress_
         result = result_merger.assemble(
             song=song, mode_used="parallel", primary_tab=web_tab, secondary_tab=ai_tab,
             chords=analysis.chords, bpm=analysis.bpm, key=analysis.key,
+            strum_pattern=analysis.strums,
             all_web_results=all_web_tabs, sources_tried=sources, warnings=warnings,
         )
     elif web_tab is not None:
@@ -229,6 +236,7 @@ async def _run_parallel(song: SongInfo, wav_path: Path, workdir: Path, progress_
         result = result_merger.assemble(
             song=song, mode_used="parallel_ai_fallback", primary_tab=ai_tab,
             chords=analysis.chords, bpm=analysis.bpm, key=analysis.key,
+            strum_pattern=analysis.strums,
             sources_tried=sources, warnings=warnings,
         )
 
