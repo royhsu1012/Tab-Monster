@@ -75,7 +75,7 @@ async def health():
 
 
 @app.get("/api/analyze/stream")
-async def analyze_stream(url: str = Query(...), mode: str = Query(DEFAULT_MODE)):
+async def analyze_stream(url: str = Query(...), mode: str = Query(DEFAULT_MODE), song_hint: str = Query("")):
     mode = _validate_mode(mode)
     job_id = uuid.uuid4().hex
     workdir = UPLOAD_DIR / job_id
@@ -86,6 +86,8 @@ async def analyze_stream(url: str = Query(...), mode: str = Query(DEFAULT_MODE))
         await progress_cb("extract", "音訊擷取完成")
 
         song = song_identifier.identify_from_youtube_metadata(metadata)
+        if song_hint.strip():
+            song = song_identifier.apply_manual_hint(song, song_hint)
         await progress_cb(
             "identify",
             f"辨識歌曲: {song.artist or '?'} - {song.title or '?'} ({song.language}/{song.genre})",
@@ -100,7 +102,11 @@ async def analyze_stream(url: str = Query(...), mode: str = Query(DEFAULT_MODE))
 
 
 @app.post("/api/analyze/file/stream")
-async def analyze_file_stream(mode: str = Query(DEFAULT_MODE), file: UploadFile = File(...)):
+async def analyze_file_stream(
+    mode: str = Query(DEFAULT_MODE),
+    song_hint: str = Query(""),
+    file: UploadFile = File(...),
+):
     mode = _validate_mode(mode)
     job_id = uuid.uuid4().hex
     workdir = UPLOAD_DIR / job_id
@@ -117,6 +123,8 @@ async def analyze_file_stream(mode: str = Query(DEFAULT_MODE), file: UploadFile 
     async def pipeline_coro(progress_cb):
         # 先從原始上傳檔讀 ID3 metadata，再轉檔——轉完 WAV 就沒有 tag 資訊可讀了
         song = song_identifier.identify_from_file_metadata(upload_path)
+        if song_hint.strip():
+            song = song_identifier.apply_manual_hint(song, song_hint)
         await progress_cb(
             "identify",
             f"辨識歌曲: {song.artist or '?'} - {song.title or '?'} ({song.language}/{song.genre})",

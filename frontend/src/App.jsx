@@ -11,12 +11,12 @@ export default function App() {
 
   const running = status === "running";
 
-  const handleStart = ({ type, value }) => {
+  const handleStart = ({ type, value, songHint }) => {
     reset();
     if (type === "url") {
-      analyzeUrl(value, mode);
+      analyzeUrl(value, mode, songHint);
     } else {
-      analyzeFile(value, mode);
+      analyzeFile(value, mode, songHint);
     }
   };
 

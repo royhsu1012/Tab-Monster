@@ -6,6 +6,7 @@ export default function InputPanel({ onStart, disabled }) {
   const [tab, setTab] = useState("url");
   const [url, setUrl] = useState("");
   const [file, setFile] = useState(null);
+  const [songHint, setSongHint] = useState("");
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef(null);
 
@@ -13,10 +14,11 @@ export default function InputPanel({ onStart, disabled }) {
 
   const handleStart = () => {
     if (!canStart) return;
+    const hint = songHint.trim();
     if (tab === "url") {
-      onStart({ type: "url", value: url.trim() });
+      onStart({ type: "url", value: url.trim(), songHint: hint });
     } else {
-      onStart({ type: "file", value: file });
+      onStart({ type: "file", value: file, songHint: hint });
     }
   };
 
@@ -88,6 +90,20 @@ export default function InputPanel({ onStart, disabled }) {
           )}
         </div>
       )}
+
+      <div>
+        <input
+          type="text"
+          value={songHint}
+          onChange={(e) => setSongHint(e.target.value)}
+          placeholder="選填：手動指定歌手/歌名，幫助找到正確的網路譜（例如：Eagles Hotel California）"
+          disabled={disabled}
+          className="w-full rounded-lg border border-detail/10 bg-transparent px-4 py-2 text-sm font-ui text-detail placeholder:text-detail/30 focus:border-accent focus:outline-none disabled:opacity-50"
+        />
+        <p className="mt-1 text-xs text-detail/40">
+          自動辨識歌名有時會猜錯（尤其是翻彈/伴奏影片），填這裡可以覆蓋自動辨識結果，網路搜不到還是會用 AI 分析
+        </p>
+      </div>
 
       <button
         type="button"

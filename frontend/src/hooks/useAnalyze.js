@@ -80,10 +80,10 @@ export default function useAnalyze() {
   }, []);
 
   const analyzeUrl = useCallback(
-    (url, mode) => {
+    (url, mode, songHint = "") => {
       const controller = new AbortController();
       abortRef.current = controller;
-      const qs = new URLSearchParams({ url, mode });
+      const qs = new URLSearchParams({ url, mode, song_hint: songHint });
       return _consume(
         fetch(`/api/analyze/stream?${qs.toString()}`, { signal: controller.signal })
       );
@@ -92,12 +92,12 @@ export default function useAnalyze() {
   );
 
   const analyzeFile = useCallback(
-    (file, mode) => {
+    (file, mode, songHint = "") => {
       const controller = new AbortController();
       abortRef.current = controller;
       const form = new FormData();
       form.append("file", file);
-      const qs = new URLSearchParams({ mode });
+      const qs = new URLSearchParams({ mode, song_hint: songHint });
       return _consume(
         fetch(`/api/analyze/file/stream?${qs.toString()}`, {
           method: "POST",

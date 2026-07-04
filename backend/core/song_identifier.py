@@ -93,6 +93,23 @@ def _split_artist_title(raw: str) -> Tuple[Optional[str], Optional[str]]:
     return None, (stripped or None)
 
 
+def apply_manual_hint(song: SongInfo, hint: str) -> SongInfo:
+    """使用者手動指定的歌手/歌名，直接蓋掉自動辨識的 artist/title（拿去做
+    網路搜譜用）。自動辨識常常猜錯（頻道名稱、標題順序、噪音字詞——見本檔案
+    其他地方的註解跟已知限制），與其不斷加規則去修正，讓使用者在知道正確
+    答案時直接指定會更可靠。language/genre 維持自動辨識結果不變，因為使用者
+    通常只會打歌手/歌名，不會特別去講語言/曲風。"""
+    hint = hint.strip()
+    if not hint:
+        return song
+    artist, title = _split_artist_title(hint)
+    return song.model_copy(update={
+        "artist": artist,
+        "title": title or hint,
+        "confidence": "high",
+    })
+
+
 def identify_from_youtube_metadata(metadata: dict) -> SongInfo:
     raw_title = metadata.get("title") or ""
     tags = metadata.get("tags") or []
