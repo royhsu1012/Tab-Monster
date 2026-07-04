@@ -13,6 +13,7 @@ from typing import List, Optional, Tuple
 import httpx
 
 from core.audio_analyzer import AudioAnalysisResult
+from core.capo_detector import suggest_capo, transpose_chord, transpose_key_label
 from core.gp_parser import parse_gp_file
 from core.tab_generator import notes_to_ascii
 from models.schemas import ChordEvent, ChordInfo, SearchResult, SongInfo, TabMonsterResult, TabResult
@@ -100,6 +101,21 @@ def assemble(
     sources_tried: Optional[List[str]] = None,
     warnings: Optional[List[str]] = None,
 ) -> TabMonsterResult:
+    warnings = list(warnings or [])
+
+    # 和弦偵測是照實際物理音高比對，capo 夾在哪都會被正確偵測成「實際發出的音」
+    # （例如 F#、C# 這種吉他手很少真的這樣彈的調）。這裡額外推論一個建議 capo
+    # 位置，如果有，就把和弦/調性換算成「夾 capo 後應該彈的簡單和弦」顯示，
+    # 對使用者比較有用；偵測邏輯本身（chroma 比對）完全不受影響。
+    capo = suggest_capo([c.chord for c in chords])
+    if capo:
+        chords = [
+            ChordEvent(time=c.time, chord=transpose_chord(c.chord, capo) or c.chord)
+            for c in chords
+        ]
+        key = transpose_key_label(key, capo)
+        warnings.append(f"偵測到和弦可能是夾 Capo {capo} 彈奏，和弦/調性已換算成夾 capo 後的簡單版本顯示")
+
     chord_names = [c.chord for c in chords]
     return TabMonsterResult(
         song=song,
@@ -110,8 +126,9 @@ def assemble(
         secondary_tab=secondary_tab,
         chords=chords,
         chord_info=build_chord_info(chord_names),
+        suggested_capo=capo,
         all_web_results=all_web_results or [],
         sources_tried=sources_tried or [],
         status="ok",
-        warnings=warnings or [],
+        warnings=warnings,
     )

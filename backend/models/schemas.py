@@ -66,6 +66,7 @@ class TabMonsterResult(BaseModel):
     secondary_tab: Optional[TabResult] = None
     chords: List[ChordEvent] = []
     chord_info: List[ChordInfo] = []
+    suggested_capo: int = 0
     all_web_results: List[TabResult] = []
     sources_tried: List[str] = []
     status: str

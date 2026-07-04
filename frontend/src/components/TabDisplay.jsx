@@ -27,7 +27,14 @@ export default function TabDisplay({ result }) {
             ♩={Math.round(result.bpm || 0)} {result.key ? `· 調：${result.key}` : ""}
           </p>
         </div>
-        <SourceBadge tab={activeTab} />
+        <div className="flex items-center gap-2">
+          {result.suggested_capo > 0 && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-accent/20 px-3 py-1 text-sm font-medium text-accent">
+              🎸 Capo {result.suggested_capo}
+            </span>
+          )}
+          <SourceBadge tab={activeTab} />
+        </div>
       </div>
 
       {result.warnings?.length > 0 && (
