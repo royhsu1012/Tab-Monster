@@ -97,6 +97,7 @@ async def _run_ai_only(song: SongInfo, wav_path: Path, progress_cb) -> TabMonste
         song=song, mode_used="ai_only", primary_tab=ai_tab,
         chords=analysis.chords, bpm=analysis.bpm, key=analysis.key,
         strum_pattern=analysis.strums,
+        beat_times=analysis.beat_times,
     )
     await _emit(progress_cb, "done", "完成", {"result": result.model_dump()})
     return result
@@ -130,6 +131,7 @@ async def _run_web_first(song: SongInfo, wav_path: Path, workdir: Path, progress
                 chords=chords, bpm=analysis.bpm or meta.get("bpm") or 0.0,
                 key=analysis.key or meta.get("key"),
                 strum_pattern=analysis.strums,
+                beat_times=analysis.beat_times,
                 all_web_results=all_web_tabs, sources_tried=sources, warnings=warnings,
             )
             await _emit(progress_cb, "done", "完成", {"result": result.model_dump()})
@@ -148,6 +150,7 @@ async def _run_web_first(song: SongInfo, wav_path: Path, workdir: Path, progress
                 song=song, mode_used="web_first_both", primary_tab=web_tab, secondary_tab=ai_tab,
                 chords=analysis.chords, bpm=analysis.bpm, key=analysis.key,
                 strum_pattern=analysis.strums,
+                beat_times=analysis.beat_times,
                 all_web_results=all_web_tabs, sources_tried=sources, warnings=warnings,
             )
         else:
@@ -156,6 +159,7 @@ async def _run_web_first(song: SongInfo, wav_path: Path, workdir: Path, progress
                 song=song, mode_used="ai_fallback", primary_tab=ai_tab,
                 chords=analysis.chords, bpm=analysis.bpm, key=analysis.key,
                 strum_pattern=analysis.strums,
+                beat_times=analysis.beat_times,
                 sources_tried=sources, warnings=warnings,
             )
         await _emit(progress_cb, "done", "完成", {"result": result.model_dump()})
@@ -171,6 +175,7 @@ async def _run_web_first(song: SongInfo, wav_path: Path, workdir: Path, progress
         song=song, mode_used="ai_fallback", primary_tab=ai_tab,
         chords=analysis.chords, bpm=analysis.bpm, key=analysis.key,
         strum_pattern=analysis.strums,
+        beat_times=analysis.beat_times,
         sources_tried=sources, warnings=warnings,
     )
     await _emit(progress_cb, "done", "完成", {"result": result.model_dump()})
@@ -222,6 +227,7 @@ async def _run_parallel(song: SongInfo, wav_path: Path, workdir: Path, progress_
             song=song, mode_used="parallel", primary_tab=web_tab, secondary_tab=ai_tab,
             chords=analysis.chords, bpm=analysis.bpm, key=analysis.key,
             strum_pattern=analysis.strums,
+            beat_times=analysis.beat_times,
             all_web_results=all_web_tabs, sources_tried=sources, warnings=warnings,
         )
     elif web_tab is not None:
@@ -237,6 +243,7 @@ async def _run_parallel(song: SongInfo, wav_path: Path, workdir: Path, progress_
             song=song, mode_used="parallel_ai_fallback", primary_tab=ai_tab,
             chords=analysis.chords, bpm=analysis.bpm, key=analysis.key,
             strum_pattern=analysis.strums,
+            beat_times=analysis.beat_times,
             sources_tried=sources, warnings=warnings,
         )
 

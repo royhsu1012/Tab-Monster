@@ -16,12 +16,14 @@ from core.audio_analyzer import AudioAnalysisResult
 from core.capo_detector import suggest_capo, transpose_chord, transpose_key_label
 from core.gp_parser import parse_gp_file
 from core.tab_generator import notes_to_ascii
-from models.schemas import ChordEvent, ChordInfo, SearchResult, SongInfo, StrumEvent, TabMonsterResult, TabResult
+from models.schemas import ChordEvent, ChordInfo, Measure, SearchResult, SongInfo, StrumEvent, TabMonsterResult, TabResult
 from utils.chord_templates import CHORD_DATA
 
 logger = logging.getLogger(__name__)
 
 CHORD_SPACING_SEC = 4.0
+BEATS_PER_MEASURE = 4
+SUBDIVISIONS_PER_BEAT = 2
 
 
 async def _download(url: str, workdir: Path) -> Optional[Path]:
@@ -42,6 +44,47 @@ def chords_from_names(names: List[str]) -> List[ChordEvent]:
     """網路譜通常只給和弦名稱清單、沒有精確時間點，用等間隔排一個粗略時間軸
     （比完全沒有時間軸好，讓 ChordTimeline 至少能畫出順序）。"""
     return [ChordEvent(time=i * CHORD_SPACING_SEC, chord=name) for i, name in enumerate(names)]
+
+
+def build_measures(
+    beat_times: List[float],
+    chords: List[ChordEvent],
+    strums: List[StrumEvent],
+) -> List[Measure]:
+    """把拍子網格切成小節（假設 4/4 拍——這個專案不偵測拍號，4/4 是流行/搖滾
+    最常見的情況），每個小節標上開頭該彈的和弦，跟每個 8 分音符格子的刷弦方向。
+
+    小節的「第一拍」是抓拍演算法偵測到的第一個拍子，不一定是這首歌真正的
+    小節起點（真正對齊小節起點需要 downbeat 偵測，這個專案沒做），但小節
+    長度跟間隔是準的，至少給一個穩定、可讀的分組方式，比攤平的時間軸好讀。
+    """
+    if len(beat_times) < BEATS_PER_MEASURE + 1:
+        return []
+
+    num_measures = (len(beat_times) - 1) // BEATS_PER_MEASURE
+    num_slots = BEATS_PER_MEASURE * SUBDIVISIONS_PER_BEAT
+
+    measures: List[Measure] = []
+    chord_idx = 0
+    for m in range(num_measures):
+        beat_start_idx = m * BEATS_PER_MEASURE
+        start_time = beat_times[beat_start_idx]
+        end_time = beat_times[beat_start_idx + BEATS_PER_MEASURE]
+
+        while chord_idx + 1 < len(chords) and chords[chord_idx + 1].time <= start_time:
+            chord_idx += 1
+        chord = chords[chord_idx].chord if chords else None
+
+        slot_duration = (end_time - start_time) / num_slots
+        slots: List[Optional[str]] = [None] * num_slots
+        for s in strums:
+            if start_time <= s.time < end_time:
+                slot_idx = min(int((s.time - start_time) / slot_duration), num_slots - 1)
+                slots[slot_idx] = s.direction
+
+        measures.append(Measure(index=m, start_time=start_time, chord=chord, strums=slots))
+
+    return measures
 
 
 def build_chord_info(chord_names: List[str]) -> List[ChordInfo]:
@@ -98,6 +141,7 @@ def assemble(
     bpm: Optional[float] = None,
     key: Optional[str] = None,
     strum_pattern: Optional[List[StrumEvent]] = None,
+    beat_times: Optional[List[float]] = None,
     all_web_results: Optional[List[TabResult]] = None,
     sources_tried: Optional[List[str]] = None,
     warnings: Optional[List[str]] = None,
@@ -118,6 +162,8 @@ def assemble(
         warnings.append(f"偵測到和弦可能是夾 Capo {capo} 彈奏，和弦/調性已換算成夾 capo 後的簡單版本顯示")
 
     chord_names = [c.chord for c in chords]
+    strum_pattern = strum_pattern or []
+    measures = build_measures(beat_times or [], chords, strum_pattern)
     return TabMonsterResult(
         song=song,
         bpm=bpm or 0.0,
@@ -127,7 +173,8 @@ def assemble(
         secondary_tab=secondary_tab,
         chords=chords,
         chord_info=build_chord_info(chord_names),
-        strum_pattern=strum_pattern or [],
+        strum_pattern=strum_pattern,
+        measures=measures,
         suggested_capo=capo,
         all_web_results=all_web_results or [],
         sources_tried=sources_tried or [],

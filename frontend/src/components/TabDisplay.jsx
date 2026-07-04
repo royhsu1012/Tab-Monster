@@ -1,6 +1,7 @@
 import { useState } from "react";
 import ChordGrid from "./ChordGrid.jsx";
 import ChordTimeline from "./ChordTimeline.jsx";
+import MeasureGrid from "./MeasureGrid.jsx";
 import SourceBadge from "./SourceBadge.jsx";
 import StrumPattern from "./StrumPattern.jsx";
 
@@ -72,8 +73,14 @@ export default function TabDisplay({ result }) {
         {view === "chords" && <ChordGrid chordInfo={result.chord_info} />}
         {view === "timeline" && (
           <div className="space-y-4">
-            <ChordTimeline chords={result.chords} />
-            <StrumPattern strums={result.strum_pattern} />
+            {result.measures?.length > 0 ? (
+              <MeasureGrid measures={result.measures} />
+            ) : (
+              <>
+                <ChordTimeline chords={result.chords} />
+                <StrumPattern strums={result.strum_pattern} />
+              </>
+            )}
           </div>
         )}
         {view === "sources" && (

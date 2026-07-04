@@ -20,8 +20,14 @@ MAX_CAPO = 7
 # capo>0 的開放和弦比例至少要比 capo=0 高這麼多，才值得建議
 # （避免對本來就已經很簡單的和弦進行硬加 capo）
 MIN_IMPROVEMENT = 0.15
-# 就算某個 capo 位移「相對最佳」，比例太低也不該硬推薦（可能整首歌本來就用很多барре/爵士和弦）
+# 就算某個 capo 位移「相對最佳」，比例太低也不該硬推薦（可能整首歌本來就用很多barre/爵士和弦）
 MIN_ABSOLUTE_SCORE = 0.5
+# 分數差在這個範圍內視為「差不多、雜訊等級」，不能只挑單一最高分——
+# 實測過一首真實錄音，capo=2 跟 capo=4 的開放和弦比例只差 0.026（0.692 vs
+# 0.718），但這首歌實際上是 capo 2，選到分數「嚴格最高」的 4 反而錯了。
+# 低把位 capo（1~3）在現實中遠比高把位常見，證據沒有壓倒性差距時，
+# 在同樣「差不多好」的候選裡優先選最低的 capo，比死板選最高分更貼近實際情況。
+TIE_BREAK_MARGIN = 0.05
 
 NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
 OPEN_CHORD_NAMES = {name for name, data in CHORD_DATA.items() if data["barre_fret"] is None}
@@ -95,18 +101,20 @@ def suggest_capo(chord_names: List[str]) -> int:
     if not chord_names:
         return 0
 
-    base_score = _open_ratio(chord_names, 0) or 0.0
-    best_capo, best_score = 0, base_score
-
+    scores = {0: _open_ratio(chord_names, 0) or 0.0}
     for capo in range(1, MAX_CAPO + 1):
         score = _open_ratio(chord_names, capo)
-        if score is not None and score > best_score:
-            best_score, best_capo = score, capo
+        if score is not None:
+            scores[capo] = score
 
-    if best_capo == 0:
-        return 0
+    base_score = scores[0]
+    best_score = max(scores.values())
+
     if best_score < MIN_ABSOLUTE_SCORE:
         return 0
     if best_score - base_score < MIN_IMPROVEMENT:
         return 0
-    return best_capo
+
+    # 分數在 best_score 附近（差距 <= TIE_BREAK_MARGIN）的候選裡選最低的 capo
+    tied_candidates = [c for c, s in scores.items() if c > 0 and best_score - s <= TIE_BREAK_MARGIN]
+    return min(tied_candidates) if tied_candidates else 0

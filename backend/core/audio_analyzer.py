@@ -44,6 +44,7 @@ class AudioAnalysisResult:
     pitches: List[RawPitch]
     chords: List[ChordEvent]
     strums: List[StrumEvent]
+    beat_times: List[float]
     bpm: float
     key: str
 
@@ -210,4 +211,7 @@ def analyze(wav_path: str) -> AudioAnalysisResult:
     strums = _detect_strum_pattern(y_percussive, sr, beat_times_full)
     key = _estimate_key(chroma.mean(axis=1))
 
-    return AudioAnalysisResult(pitches=pitches, chords=chords, strums=strums, bpm=bpm, key=key)
+    return AudioAnalysisResult(
+        pitches=pitches, chords=chords, strums=strums,
+        beat_times=beat_times_full.tolist(), bpm=bpm, key=key,
+    )

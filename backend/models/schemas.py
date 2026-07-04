@@ -40,6 +40,15 @@ class ChordInfo(BaseModel):
     barre_fret: Optional[int] = None
 
 
+class Measure(BaseModel):
+    """一個小節（假設 4/4 拍）：小節開頭該彈的和弦 + 這個小節內每個 8 分音符
+    格子的刷弦方向（None = 那一格沒有偵測到刷弦）。"""
+    index: int
+    start_time: float
+    chord: Optional[str] = None
+    strums: List[Optional[Literal["down", "up"]]] = []
+
+
 class SearchResult(BaseModel):
     source: str
     source_url: str
@@ -72,6 +81,7 @@ class TabMonsterResult(BaseModel):
     chords: List[ChordEvent] = []
     chord_info: List[ChordInfo] = []
     strum_pattern: List[StrumEvent] = []
+    measures: List[Measure] = []
     suggested_capo: int = 0
     all_web_results: List[TabResult] = []
     sources_tried: List[str] = []
