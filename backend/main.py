@@ -10,7 +10,7 @@ from fastapi import FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
-from core import audio_extractor, pipeline, song_identifier
+from core import audio_extractor, llm_identifier, pipeline, song_identifier
 from core.errors import TabMonsterError
 from models.schemas import ProgressEvent
 
@@ -85,7 +85,7 @@ async def analyze_stream(url: str = Query(...), mode: str = Query(DEFAULT_MODE),
         wav_path, metadata = await asyncio.to_thread(audio_extractor.extract_from_youtube, url, workdir)
         await progress_cb("extract", "音訊擷取完成")
 
-        song = song_identifier.identify_from_youtube_metadata(metadata)
+        song = await llm_identifier.identify_with_llm(metadata)
         if song_hint.strip():
             song = song_identifier.apply_manual_hint(song, song_hint)
         await progress_cb(
