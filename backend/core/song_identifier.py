@@ -28,6 +28,32 @@ INDIE_KEYWORDS = ["indie", "獨立製作", "独立制作", "demo"]
 
 ARTIST_TITLE_SEPS = [" - ", "－", "–", "—", "｜", " | ", "：", ": "]
 
+# YouTube 標題常見的「這是一支什麼影片」描述字詞，會稀釋搜尋相關性。
+# 實測過：查 "Hotel California Solo acoustic guitar" 在 Chordie 上會被無關
+# 頁面（Emmylou Harris 的另一首歌）搶到最高分，去掉 "Solo acoustic guitar"
+# 這類描述字後查 "Hotel California" 才正確命中 Eagles 原曲的和弦頁。
+_SEARCH_NOISE_PATTERNS = [
+    r"\((?:official|lyrics?|live|cover|hd|4k|audio)[^)]*\)",
+    r"\[(?:official|lyrics?|live|cover|hd|4k|audio)[^\]]*\]",
+    r"\bofficial\s*(?:music\s*)?video\b", r"\bofficial\s*mv\b", r"\bmv\b",
+    r"\b(?:solo\s*)?acoustic\s*(?:guitar\s*)?cover\b", r"\bguitar\s*cover\b", r"\bcover\b",
+    r"\bsolo\s*(?:acoustic\s*)?guitar\b", r"\bacoustic\b", r"\bfingerstyle\b",
+    r"\bguitar\s*(?:tutorial|lesson)\b", r"\btutorial\b", r"\blesson\b",
+    r"\bwith\s*lyrics\b", r"\bkaraoke\b", r"\binstrumental\b", r"\bfull\s*song\b",
+    r"（[^）]*(?:伴奏|前奏|教學)[^）]*）", r"\([^)]*(?:伴奏|前奏|教學)[^)]*\)",
+    r"純?吉他伴奏", r"吉他教學", r"吉他版", r"彈唱", r"翻彈", r"教學",
+    r"^#?[A-G]#?調\s*",
+]
+_SEARCH_NOISE_RE = re.compile("|".join(_SEARCH_NOISE_PATTERNS), re.IGNORECASE)
+
+
+def clean_search_title(text: str) -> str:
+    """把 YouTube 標題常見的描述字詞（cover/acoustic/官方MV/吉他伴奏...）
+    去掉，只留下比較乾淨的歌名去查網路譜庫。只用在搜尋查詢字串，不影響
+    SongInfo.title 本身的顯示（顯示保留原始標題，資訊比較完整）。"""
+    cleaned = _SEARCH_NOISE_RE.sub(" ", text)
+    return re.sub(r"\s+", " ", cleaned).strip()
+
 
 def _detect_language(text: str) -> Language:
     if HANGUL.search(text):
@@ -71,8 +97,12 @@ def identify_from_youtube_metadata(metadata: dict) -> SongInfo:
     raw_title = metadata.get("title") or ""
     tags = metadata.get("tags") or []
     artist, title = _split_artist_title(raw_title)
-    if artist is None and metadata.get("uploader"):
-        artist = metadata["uploader"]
+    # 故意不把找不到分隔符時的 uploader（頻道名稱）當成 artist 的 fallback：
+    # 翻彈/伴奏影片標題常常沒有「歌手 - 歌名」格式，頻道名稱（例如某個翻彈
+    # 頻道）幾乎不會是真正的歌手，拿去查網路譜庫只會查到不相干的結果
+    # （實測過："medivet channel - Hotel California" 這樣誤判後，Chordie
+    # 搜尋回傳了完全無關的和弦頁面）。artist=None 時 tab_searcher 只會用
+    # 標題去搜，反而比硬塞一個錯的歌手名安全。
 
     # 純漢字的日文標題（例如「前前前世」）沒有假名可判斷語言，
     # 但 tags 常帶假名（如「アニメ」），一併納入可大幅降低誤判成中文的機率

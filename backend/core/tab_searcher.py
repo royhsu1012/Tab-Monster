@@ -5,6 +5,7 @@ import logging
 from typing import Dict, List, Tuple
 
 from models.schemas import SearchResult, SongInfo
+from core.song_identifier import clean_search_title
 from core.sources import (
     source_91jtp,
     source_91pu,
@@ -67,7 +68,7 @@ def score_result(result: SearchResult) -> float:
 async def search_sources(source_names: List[str], song: SongInfo) -> List[SearchResult]:
     """依名單平行呼叫各來源，任一來源例外或逾時都靜默跳過，不影響其他來源。"""
     artist = song.artist or ""
-    title = song.title or ""
+    title = clean_search_title(song.title or "")
 
     async def _run_one(name: str):
         fn = SOURCE_REGISTRY.get(name)
